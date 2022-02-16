@@ -105,7 +105,7 @@
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
             v-for="t in paginatedTickers"
             @click="onSelectTicker(t)"
-            :class="selectedTicker === t ? 'border-2' : ''"
+            :class="{'border-2': selectedTicker === t, 'bg-red-100': t.price === '_'}"
             :key="t"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
@@ -305,24 +305,23 @@ export default {
     },
     
     formatPrice(price) {
+      console.log(price)
       if (price === '_') {
         return price;
+
       }
       
       return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
 
-    // async updateTickers() {
-    //   const responseData = await loadTickers(this.tickers.map(ticker => ticker.name));
-    //   this.tickers.forEach(ticker => {
-    //     const price = responseData[ticker.name.toUpperCase()];
-    //     ticker.price = price ?? '_';
-    //   })
-    // },
-
     updateTicker(tickerName, price) {
       this.tickers.filter(ticker => ticker.name === tickerName).forEach(
-        ticker => {ticker.price = price}
+        ticker => {
+          if (ticker === this.selectedTicker) {
+            this.graph.push(ticker.price)
+          }
+          ticker.price = price
+        }
       )
     },
 
