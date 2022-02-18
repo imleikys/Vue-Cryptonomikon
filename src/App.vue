@@ -144,7 +144,7 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div class="flex items-end border-gray-600 border-b border-l h-64" ref="graph">
           <div
             v-for="(bar, idx) in normilizedBar"
             :style="{ height: `${bar}%` }"
@@ -202,6 +202,7 @@ export default {
       updateInterval: null,
       page: 1,
       filter: '',
+      maxGraphElements: 1,
     };
   },
 
@@ -305,10 +306,8 @@ export default {
     },
     
     formatPrice(price) {
-      console.log(price)
       if (price === '_') {
         return price;
-
       }
       
       return price > 1 ? price.toFixed(2) : price.toPrecision(2);
@@ -319,10 +318,21 @@ export default {
         ticker => {
           if (ticker === this.selectedTicker) {
             this.graph.push(ticker.price)
+
+            while (this.graph.length > this.maxGraphElements) {
+              this.graph.shift();
+            }
           }
           ticker.price = price
         }
       )
+    },
+
+    calculateMaxGraphElements() {
+      if (!this.$refs.graph) {
+        return;
+      }
+      this.maxGraphElements = this.$refs.graph.clientWidth / 38; 
     },
 
     onRemoveHandler(tickerToRemove) {
@@ -369,12 +379,19 @@ export default {
     }
   },
   mounted() {
+    window.addEventListener('resize', this.calculateMaxGraphElements);
     this.loading = true;
     this.getCoins();
   },
+
+  beforeUnmount() {
+    window.removeEventListener('resize', this.calculateMaxGraphElements);
+  },
+
   watch: {
     selectedTicker: function() {
       this.graph = [];
+      this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
     tickers: function() {
