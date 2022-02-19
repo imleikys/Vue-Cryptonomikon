@@ -26,62 +26,11 @@
       </svg>
     </div>
     <div class="container">
-      <section>
-        <div class="flex">
-          <div class="max-w-xs">
-            <label for="wallet" class="block text-sm font-medium text-gray-700"
-              >Тикер</label
-            >
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                v-model="ticker"
-                @keydown.enter="onAddHandler"
-                @input="onInputHandler"
-                type="text"
-                name="wallet"
-                id="wallet"
-                class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                placeholder="Например DOGE"
-              />
-            </div>
-            <div
-              v-if="ticker.length"
-              class="flex bg-white shadow-md p-1 rounded-md flex-wrap"
-            >
-              <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-                v-for="coin in sortedSuggests"
-                :key="coin.Symbol"
-                @click="onAddHandler(coin.Symbol)"
-              >
-                {{coin.Symbol}}
-              </span>
-            </div>
-            <div v-if="tickerError.length !== 0" class="text-sm text-red-600">{{tickerError}}</div>
-          </div>
-        </div>
-        <button
-          type="button"
-          class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          @click="onAddHandler"
-        >
-          <!-- Heroicon name: solid/mail -->
-          <svg
-            class="-ml-0.5 mr-2 h-6 w-6"
-            xmlns="http://www.w3.org/2000/svg"
-            width="30"
-            height="30"
-            viewBox="0 0 24 24"
-            fill="#ffffff"
-          >
-            <path
-              d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-            ></path>
-          </svg>
-          Добавить
-        </button>
-      </section>
-
+      <app-add-ticker
+        :tickers="tickers"
+        @add-ticker="onAddHandler"
+        @finish-loading="loading = false"
+      ></app-add-ticker>
       <template v-if="tickers.length">
         <hr>
           <div>
@@ -186,19 +135,20 @@
 
 <script>
 import {subscribeToTicker, unsubscribeFromTicker} from './api';
+import AppAddTicker from './components/AppAddTicker.vue';
 
 export default {
   name: 'App',
+  components: {
+    AppAddTicker,
+  },
   data() {
     return {
       loading: false,
-      ticker: '',
       tickers: [],
       selectedTicker: null,
       graph: [],
       coins: [],
-      suggestCoins: [],
-      tickerError: '',
       updateInterval: null,
       page: 1,
       filter: '',
@@ -242,10 +192,6 @@ export default {
       );
     },
 
-    sortedSuggests() {
-      return this.suggestCoins.slice(0, 4);
-    },
-
     filteredTickers() {
       return this.tickers.filter(ticker => ticker.name.includes(this.filter))
     },
@@ -275,34 +221,14 @@ export default {
   },
 
   methods: {
-    onAddHandler(selectedCoin) {
-      const currentTicker = { name, price: "_" };
-      if (typeof selectedCoin === "string") {
-        currentTicker.name = selectedCoin.toUpperCase();
-      } else {
-        currentTicker.name = this.ticker.toUpperCase();
-      }
-
-      this.tickers.forEach(ticker => {
-        if (ticker.name === currentTicker.name) {
-          this.tickerError = 'Такой тикер уже добавлен';
-          return;
-        }
-      })
-
-      if(this.tickerError) {
-        return;
-      }
+    onAddHandler(ticker) {
+      const currentTicker = { name: ticker, price: "_" };
+      this.filter = '';
 
       this.tickers = [...this.tickers, currentTicker];
-      this.ticker = '';
       subscribeToTicker(currentTicker.name, newPrice => {
         this.updateTicker(currentTicker.name, newPrice)
-      })
-
-
-      this.tickerError = '';
-      this.filter = '';
+      });
     },
     
     formatPrice(price) {
@@ -353,35 +279,10 @@ export default {
     onSelectTicker(selectedTicker) {
       this.selectedTicker = selectedTicker;
     },
-
-    onInputHandler() {
-      this.suggestCoins = Object.values(this.coins).filter((coin)=> coin.FullName.toLowerCase().includes(this.ticker.toLowerCase()));
-      if (this.suggestCoins.length === 0) {
-        this.tickerError = 'Монета не найдена';
-      } else {
-        this.tickerError = '';
-      }
-    },
-
-    async getCoins() {
-      try {
-        const f = await fetch(
-          'https://min-api.cryptocompare.com/data/all/coinlist?summary=true'
-        )
-
-        const response = await f.json();
-        this.coins = response.Data;
-      } catch (error) {
-        console.warn(error);
-      }
-
-      this.loading = false;
-    }
   },
   mounted() {
     window.addEventListener('resize', this.calculateMaxGraphElements);
     this.loading = true;
-    this.getCoins();
   },
 
   beforeUnmount() {
