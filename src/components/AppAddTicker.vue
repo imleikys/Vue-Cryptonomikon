@@ -65,6 +65,7 @@ export default {
 
   methods: {
     onAddHandler(selectedCoin) {
+      console.log(selectedCoin)
       let currentTicker = ''; 
       if (typeof selectedCoin === "string") {
         currentTicker = selectedCoin.toUpperCase();
